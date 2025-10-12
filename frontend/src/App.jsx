@@ -12,6 +12,17 @@ import LoadingSpinner from './components/LoadingSpinner';
 import NotificationPrompt from './components/NotificationPrompt';
 import ToastProvider from './contexts/ToastContext';
 
+// Fallback simple en caso de error
+const ErrorFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="text-center">
+      <h1 className="text-2xl font-bold text-blue-600 mb-4">MGAP - Gestión de Viajes</h1>
+      <p className="text-gray-600 mb-4">Cargando aplicación...</p>
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+    </div>
+  </div>
+);
+
 // Lazy loading para optimizar la carga
 const Trips = React.lazy(() => import('./pages/Trips'));
 const Vehicles = React.lazy(() => import('./pages/Vehicles'));
@@ -27,6 +38,41 @@ function App() {
     sendTestNotification,
     isGranted 
   } = useNotificationPermissions();
+
+  // Error boundary simple
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleError = (error) => {
+      console.error('App Error:', error);
+      setHasError(true);
+    };
+    
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleError);
+    
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleError);
+    };
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Error de Aplicación</h1>
+          <p className="text-gray-600 mb-4">Ha ocurrido un error inesperado.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Recargar Página
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     // Inicializar autenticación desde localStorage
@@ -78,12 +124,7 @@ function App() {
 
   return (
     <ToastProvider>
-      <Router 
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
+      <Router>
         <div className="App">
         <Toaster
           position="top-right"
