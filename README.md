@@ -3,3 +3,4 @@ Sun Oct 12 13:57:00 -03 2025
 Sun Oct 12 14:29:00 -03 2025
 Force deploy Sun Oct 12 14:57:02 -03 2025
 Chofer fix deployment Sun Oct 12 15:13:37 -03 2025
+Mobile debug Sun Oct 12 15:18:17 -03 2025
