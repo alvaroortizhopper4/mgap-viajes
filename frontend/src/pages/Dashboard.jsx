@@ -100,9 +100,19 @@ const Dashboard = () => {
 
   // Vista específica para choferes
   if (user?.role === 'chofer') {
-    return (
-      <div className="space-y-6">
-        {/* Header para choferes */}
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    console.log('📱 Dashboard chofer - Dispositivo móvil:', isMobile);
+    console.log('📱 Dashboard chofer - Datos disponibles:', {
+      user: !!user,
+      upcomingTrips: upcomingTrips?.length || 0,
+      isLoading,
+      userAgent: navigator.userAgent.substring(0, 100)
+    });
+    
+    try {
+      return (
+        <div className="space-y-6">
+          {/* Header para choferes */}
         <div>
           <div className="flex items-start justify-between">
             <div>
@@ -177,10 +187,33 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        {/* Componente de prueba de notificaciones */}
-        <NotificationTester />
-      </div>
-    );
+          {/* Componente de prueba de notificaciones */}
+          <NotificationTester />
+        </div>
+      );
+    } catch (error) {
+      console.error('📱 Error renderizando dashboard chofer:', error);
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center p-6">
+            <h1 className="text-2xl font-bold text-blue-600 mb-4">¡Bienvenido, {user?.name}!</h1>
+            <p className="text-gray-600 mb-4">Dashboard para choferes</p>
+            <p className="text-sm text-gray-500 mb-4">
+              Dispositivo: {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'Móvil' : 'Desktop'}
+            </p>
+            <div className="space-y-4">
+              <Link
+                to="/trips"
+                className="block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                Ver Mis Viajes
+              </Link>
+              <NotificationTester />
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
 
   if (isLoading && !stats) {

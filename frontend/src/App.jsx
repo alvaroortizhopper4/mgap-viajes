@@ -42,20 +42,46 @@ function App() {
   // Error boundary simple
   const [hasError, setHasError] = React.useState(false);
 
+  // Detectar si es móvil
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  React.useEffect(() => {
+    console.log('📱 Dispositivo detectado:', isMobile ? 'Móvil' : 'Desktop');
+    console.log('🌐 User Agent:', navigator.userAgent);
+  }, [isMobile]);
+
   React.useEffect(() => {
     const handleError = (error) => {
-      console.error('App Error:', error);
+      console.error('📱 App Error (Móvil:', isMobile, '):', error);
+      if (isMobile) {
+        console.error('📱 Error específico en móvil:', {
+          message: error.message || error.reason?.message,
+          stack: error.error?.stack,
+          type: error.type
+        });
+      }
       setHasError(true);
     };
     
+    const handleUnhandledRejection = (event) => {
+      console.error('📱 Unhandled Promise Rejection (Móvil:', isMobile, '):', event.reason);
+      if (isMobile) {
+        console.error('📱 Promise rejection en móvil:', {
+          reason: event.reason,
+          promise: event.promise
+        });
+      }
+      // No setear hasError para promesas rechazadas, solo logear
+    };
+    
     window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
     
     return () => {
       window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
-  }, []);
+  }, [isMobile]);
 
   if (hasError) {
     return (
