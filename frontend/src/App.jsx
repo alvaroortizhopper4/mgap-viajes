@@ -30,6 +30,8 @@ const Users = React.lazy(() => import('./pages/Users'));
 const Drivers = React.lazy(() => import('./pages/Drivers'));
 
 function App() {
+
+
   const { initialize, isAuthenticated, user, logout } = useAuthStore();
   const { showNotification } = useNotifications();
   const { 
@@ -39,8 +41,9 @@ function App() {
     isGranted 
   } = useNotificationPermissions();
 
-  // Error boundary simple
+  // Error boundary mejorado
   const [hasError, setHasError] = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState(null);
 
   // Detectar si es móvil
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -52,26 +55,28 @@ function App() {
 
   React.useEffect(() => {
     const handleError = (error) => {
-      console.error('📱 App Error (Móvil:', isMobile, '):', error);
+      let msg = error.message || error.reason?.message || String(error);
       if (isMobile) {
         console.error('📱 Error específico en móvil:', {
-          message: error.message || error.reason?.message,
+          message: msg,
           stack: error.error?.stack,
           type: error.type
         });
       }
+      setErrorMsg(msg);
       setHasError(true);
     };
     
     const handleUnhandledRejection = (event) => {
-      console.error('📱 Unhandled Promise Rejection (Móvil:', isMobile, '):', event.reason);
+      let msg = event.reason?.message || String(event.reason);
       if (isMobile) {
         console.error('📱 Promise rejection en móvil:', {
-          reason: event.reason,
+          reason: msg,
           promise: event.promise
         });
       }
-      // No setear hasError para promesas rechazadas, solo logear
+      setErrorMsg(msg);
+      setHasError(true);
     };
     
     window.addEventListener('error', handleError);
@@ -88,7 +93,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Error de Aplicación</h1>
-          <p className="text-gray-600 mb-4">Ha ocurrido un error inesperado.</p>
+          <p className="text-gray-600 mb-4">{errorMsg ? errorMsg : 'Ha ocurrido un error inesperado.'}</p>
           <button 
             onClick={() => window.location.reload()} 
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
@@ -152,6 +157,24 @@ function App() {
     <ToastProvider>
       <Router>
         <div className="App">
+          {isMobile && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              zIndex: 9999,
+              background: '#ffecb3',
+              color: '#b00020',
+              fontWeight: 'bold',
+              fontSize: 18,
+              padding: 12,
+              textAlign: 'center',
+              borderBottom: '2px solid #b00020',
+            }}>
+              📱 Debug móvil activo - React está montado
+            </div>
+          )}
         <Toaster
           position="top-right"
           toastOptions={{

@@ -113,31 +113,33 @@ const onForegroundMessage = (callback) => {
 // Mostrar notificación local
 const showLocalNotification = (title, body, data = {}) => {
   if (!('Notification' in window) || Notification.permission !== 'granted') {
-    console.log('No se puede mostrar notificación local');
     return;
   }
-
+  // Unificar deduplicación con polling
+  if (!window.shownNotificationIds) window.shownNotificationIds = new Set();
+  const shownNotificationIds = window.shownNotificationIds;
+  const notifId = data._id || data.tag || title + body;
+  if (shownNotificationIds.has(notifId)) {
+    return;
+  }
+  shownNotificationIds.add(notifId);
   try {
     const notification = new Notification(title, {
       body,
-      icon: '/icon-192x192.png', // Asegurate de tener este archivo
+      icon: '/icon-192x192.png',
       badge: '/icon-192x192.png',
-      tag: data.tag || 'mgap-notification',
+      tag: notifId,
       data
     });
-
     notification.onclick = () => {
-      console.log('Notificación clickeada:', data);
       window.focus();
       notification.close();
     };
-
-    // Auto-cerrar después de 5 segundos
     setTimeout(() => {
       notification.close();
     }, 5000);
   } catch (error) {
-    console.error('Error mostrando notificación local:', error);
+    // Silenciar error
   }
 };
 

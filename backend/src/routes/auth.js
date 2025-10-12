@@ -16,7 +16,7 @@ const handleValidationErrors = require('../middleware/validation');
 // @access  Private (solo admin)
 router.post('/register', 
   auth, 
-  authorize('administrativo'),
+  authorize('admin_principal', 'administrativo'),
   registerValidation,
   handleValidationErrors,
   register

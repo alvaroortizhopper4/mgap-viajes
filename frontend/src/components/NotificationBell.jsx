@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BellIcon } from 'lucide-react';
-import useNotificationPolling from '../hooks/useNotificationPolling';
+import useNotificationPollingFixed from '../hooks/useNotificationPollingFixed';
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,7 +13,7 @@ const NotificationBell = () => {
     markAsRead,
     markAllAsRead,
     fetchNotifications
-  } = useNotificationPolling();
+  } = useNotificationPollingFixed();
 
   const formatTime = (date) => {
     const now = new Date();
@@ -166,7 +166,15 @@ const NotificationBell = () => {
             {/* Lista de notificaciones - Scrolleable */}
             <div className="max-h-64 overflow-y-auto">
               {recentNotifications.length > 0 ? (
-                recentNotifications.map((notification) => (
+                // Deduplicar por título, cuerpo y tipo
+                Array.from(
+                  new Map(
+                    recentNotifications.map(n => [
+                      n.title + n.body + (n.type || ''),
+                      n
+                    ])
+                  ).values()
+                ).map((notification) => (
                   <div
                     key={notification._id}
                     onClick={() => handleNotificationClick(notification)}

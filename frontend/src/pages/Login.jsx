@@ -26,17 +26,19 @@ const Login = () => {
     }
   }, [isAuthenticated, navigate, from]);
 
+  const [notifError, setNotifError] = useState(null);
+
   const onSubmit = async (data) => {
+    setNotifError(null);
     const success = await login(data.email, data.password);
     if (success) {
       // Solicitar permisos de notificación solo para choferes
-      // Esperamos un poco para que el estado se actualice después del login
       setTimeout(() => {
         const { isDriver, user } = useAuthStore.getState();
         console.log('🔍 Debug login - Usuario después del login:', user);
         console.log('🔍 Debug login - ¿Es chofer?:', isDriver());
         console.log('🔍 Debug login - ¿Soporta notificaciones?:', isSupported);
-        
+
         if (isSupported && isDriver()) {
           console.log('✅ Iniciando solicitud de notificaciones para chofer');
           setTimeout(async () => {
@@ -49,8 +51,9 @@ const Login = () => {
               }
             } catch (error) {
               console.log('❌ Error configurando notificaciones para chofer:', error);
+              setNotifError('Error configurando notificaciones: ' + (error?.message || String(error)));
             }
-          }, 500); // Delay adicional para mejor UX
+          }, 500);
         } else {
           console.log('ℹ️ No se solicitarán notificaciones:', {
             isSupported,
@@ -58,8 +61,8 @@ const Login = () => {
             userRole: user?.role
           });
         }
-      }, 100); // Pequeño delay para que se actualice el estado
-      
+      }, 100);
+            
       navigate(from, { replace: true });
     }
   };
@@ -77,6 +80,15 @@ const Login = () => {
         </div>
       </div>
 
+        {notifError && (
+          <div style={{ background: '#fff0f0', color: '#b00020', fontSize: 18, padding: 16, textAlign: 'center', border: '2px solid #b00020', borderRadius: 8, marginBottom: 16 }}>
+            <strong>🚨 Error de notificaciones</strong>
+            <br />
+            {notifError}
+            <br />
+            Si esto persiste, reporta este mensaje a soporte.
+          </div>
+        )}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>

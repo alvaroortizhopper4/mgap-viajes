@@ -100,16 +100,21 @@ const Trips = () => {
     console.log('🚀 handleCreateTrip llamado con data:', data);
     setSubmitting(true);
     try {
+      // Ajustar la fecha a mediodía local para evitar desfase UTC
+      const toLocalNoonISOString = (dateStr) => {
+        const [year, month, day] = dateStr.split('-');
+        const localDate = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0, 0);
+        return localDate.toISOString();
+      };
       const tripData = {
         ...data,
-        departureDate: new Date(data.departureDate).toISOString(),
-        returnDate: data.returnDate ? new Date(data.returnDate).toISOString() : null,
+        departureDate: toLocalNoonISOString(data.departureDate),
+        returnDate: data.returnDate ? toLocalNoonISOString(data.returnDate) : null,
         departureTime: data.departureTime, // Hora de salida obligatoria
         // returnTime se establece automáticamente al finalizar
         passengers: [], // Por ahora enviar array vacío, el campo del formulario es solo informativo
       };
       console.log('📝 Datos a enviar:', tripData);
-      
       await createTrip(tripData);
       console.log('✅ Viaje creado exitosamente');
       setIsCreateModalOpen(false);
@@ -539,10 +544,11 @@ const Trips = () => {
                     setIsOneDayTrip(newOneDayState);
                     
                     if (newOneDayState) {
-                      // Activar modo "viaje de un día" - establecer fecha de hoy en ambos campos
-                      const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
-                      setValue('departureDate', today);
-                      setValue('returnDate', today);
+                      // Activar modo "viaje de un día" - establecer fecha de hoy en ambos campos (local)
+                      const now = new Date();
+                      const todayLocal = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+                      setValue('departureDate', todayLocal);
+                      setValue('returnDate', todayLocal);
                     } else {
                       // Desactivar modo "viaje de un día" - limpiar ambos campos
                       setValue('departureDate', '');

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
-import NotificationTester from '../components/NotificationTester';
+import AnimatedCars from '../components/AnimatedCars';
 // import AutoRefreshControl from '../components/AutoRefreshControl';
 // import useAutoRefresh from '../hooks/useAutoRefresh';
 import useDashboardStore from '../store/dashboardStore';
@@ -108,30 +108,17 @@ const Dashboard = () => {
       isLoading,
       userAgent: navigator.userAgent.substring(0, 100)
     });
-    
-    try {
-      return (
-        <div className="space-y-6">
-          {/* Header para choferes */}
-        <div>
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                ¡Bienvenido, {user?.name}!
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Aquí puedes ver tus viajes asignados y próximas tareas
-              </p>
-            </div>
-          </div>
-        </div>
 
-        {/* Mis Viajes */}
-        <Card title="Mis Próximos Viajes">
-          {upcomingTrips && upcomingTrips.length > 0 ? (
-            <div className="space-y-4">
-              {upcomingTrips.slice(0, 5).map((trip) => (
-                <div key={trip._id || trip.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+    let renderError = null;
+    let renderedTrips = null;
+    try {
+      renderedTrips = upcomingTrips && upcomingTrips.length > 0 ? (
+        <div className="space-y-4">
+          {upcomingTrips.slice(0, 5).map((trip, idx) => {
+            try {
+              console.log('📱 Renderizando trip', idx, trip);
+              return (
+                <div key={trip._id || trip.id || idx} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                   <div className="flex-1">
                     <h3 className="font-medium text-gray-900">
                       {trip.origin} → {trip.destination}
@@ -150,21 +137,67 @@ const Dashboard = () => {
                       'bg-gray-100 text-gray-800'
                     }`}>
                       {trip.status === 'pending' ? 'Pendiente' :
-                       trip.status === 'approved' ? 'Aprobado' :
-                       trip.status || 'Sin estado'}
+                        trip.status === 'approved' ? 'Aprobado' :
+                        trip.status || 'Sin estado'}
                     </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <MapPinIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">
-                {isLoading ? 'Cargando tus viajes...' : 'No tienes viajes próximos asignados'}
+              );
+            } catch (tripError) {
+              console.error('❌ Error renderizando trip', idx, tripError, trip);
+              renderError = 'Error en viaje #' + (idx + 1) + ': ' + (tripError?.message || String(tripError));
+              return (
+                <div key={idx} style={{ color: 'red', fontWeight: 'bold' }}>
+                  Error en viaje #{idx + 1}: {tripError?.message || String(tripError)}
+                </div>
+              );
+            }
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <MapPinIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500">
+            {isLoading ? 'Cargando tus viajes...' : 'No tienes viajes próximos asignados'}
+          </p>
+        </div>
+      );
+    } catch (error) {
+      console.error('📱 Error renderizando lista de viajes:', error);
+      renderError = error?.message || String(error);
+    }
+
+    if (renderError) {
+      return (
+        <div style={{ background: '#fff0f0', color: '#b00020', fontSize: 22, padding: 32, textAlign: 'center', border: '3px solid #b00020', borderRadius: 12, margin: 24 }}>
+          <strong>🚨 Error en la lista de viajes</strong>
+          <br /><br />
+          <span style={{ fontSize: 18 }}>{renderError}</span>
+          <br /><br />
+          <span style={{ fontSize: 16, color: '#333' }}>Copia este mensaje y envíalo al soporte.<br />Si puedes, haz una captura de pantalla.</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Header para choferes */}
+        <div>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                ¡Bienvenido, {user?.name}!
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Aquí puedes ver tus viajes asignados y próximas tareas
               </p>
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* Mis Viajes */}
+        <Card title="Mis Próximos Viajes">
+          {renderedTrips}
         </Card>
 
         {/* Accesos rápidos para chofer */}
@@ -187,33 +220,8 @@ const Dashboard = () => {
           </div>
         </Card>
 
-          {/* Componente de prueba de notificaciones */}
-          <NotificationTester />
-        </div>
-      );
-    } catch (error) {
-      console.error('📱 Error renderizando dashboard chofer:', error);
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center p-6">
-            <h1 className="text-2xl font-bold text-blue-600 mb-4">¡Bienvenido, {user?.name}!</h1>
-            <p className="text-gray-600 mb-4">Dashboard para choferes</p>
-            <p className="text-sm text-gray-500 mb-4">
-              Dispositivo: {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'Móvil' : 'Desktop'}
-            </p>
-            <div className="space-y-4">
-              <Link
-                to="/trips"
-                className="block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Ver Mis Viajes
-              </Link>
-              <NotificationTester />
-            </div>
-          </div>
-        </div>
-      );
-    }
+      </div>
+    );
   }
 
   if (isLoading && !stats) {
@@ -226,6 +234,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      <AnimatedCars />
       {/* Header */}
       <div>
         <div className="flex items-start justify-between">
@@ -397,8 +406,6 @@ const Dashboard = () => {
         </div>
       </Card>
 
-      {/* Componente de prueba de notificaciones */}
-      <NotificationTester />
     </div>
   );
 };

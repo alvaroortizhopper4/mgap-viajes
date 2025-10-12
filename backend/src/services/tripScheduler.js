@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const Trip = require('../models/Trip');
-const { sendNotificationToUser } = require('./notificationService');
+const { sendNotificationToUser, sendNotificationToAllExcept } = require('./notificationService');
 
 class TripSchedulerService {
   constructor() {
@@ -193,37 +193,20 @@ class TripSchedulerService {
   async sendTripReminder(trip) {
     try {
       const reminderTitle = '⏰ Recordatorio de Viaje';
-      const reminderBody = `Tu viaje a ${trip.destination} comienza en 15 minutos (${trip.departureTime})`;
-      
-      // Notificar al chofer (sendNotificationToUser ya crea la notificación en BD)
-      await sendNotificationToUser(
-        trip.driver._id.toString(),
+      const reminderBody = `El viaje de ${trip.driver.name} a ${trip.destination} comienza en 15 minutos (${trip.departureTime})`;
+      // Notificar a todos los usuarios excepto el chofer (que ya lo recibe por su cuenta)
+      await sendNotificationToAllExcept(
+        null, // null para incluir a todos
         reminderTitle,
         reminderBody,
         {
-          type: 'trip_reminder',
-          tripId: trip._id.toString(),
-          destination: trip.destination,
-          departureTime: trip.departureTime
-        }
-      );
-
-      // Notificar al admin que creó el viaje (sendNotificationToUser ya crea la notificación en BD)
-      const adminReminderBody = `El viaje de ${trip.driver.name} a ${trip.destination} comienza en 15 minutos (${trip.departureTime})`;
-      
-      await sendNotificationToUser(
-        trip.createdBy._id.toString(),
-        reminderTitle,
-        adminReminderBody,
-        {
-          type: 'trip_reminder_admin',
+          type: 'trip_reminder_universal',
           tripId: trip._id.toString(),
           driverName: trip.driver.name,
           destination: trip.destination,
           departureTime: trip.departureTime
         }
       );
-
     } catch (error) {
       console.error('Error enviando recordatorio:', error);
     }
@@ -233,20 +216,18 @@ class TripSchedulerService {
   async sendTripStartedNotification(trip) {
     try {
       const startTitle = '🚀 Viaje Iniciado';
-      const startBody = `Tu viaje a ${trip.destination} ha comenzado`;
-      
-      // sendNotificationToUser ya crea la notificación en la base de datos
-      await sendNotificationToUser(
-        trip.driver._id.toString(),
+      const startBody = `El viaje de ${trip.driver.name} a ${trip.destination} ha comenzado`;
+      await sendNotificationToAllExcept(
+        null,
         startTitle,
         startBody,
         {
-          type: 'trip_started',
+          type: 'trip_started_universal',
           tripId: trip._id.toString(),
+          driverName: trip.driver.name,
           destination: trip.destination
         }
       );
-
     } catch (error) {
       console.error('Error enviando notificación de inicio:', error);
     }
