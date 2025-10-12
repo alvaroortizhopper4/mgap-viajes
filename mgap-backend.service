@@ -1,0 +1,27 @@
+[Unit]
+Description=MGAP Gestion de Choferes - Backend API
+After=network.target
+After=mongodb.service
+Requires=mongodb.service
+
+[Service]
+Type=forking
+User=node
+Group=node
+WorkingDirectory=/var/www/mgap-backend
+Environment=NODE_ENV=production
+Environment=PORT=5000
+ExecStart=/usr/local/bin/pm2 start ecosystem.config.json --env production
+ExecReload=/usr/local/bin/pm2 reload mgap-backend
+ExecStop=/usr/local/bin/pm2 stop mgap-backend
+Restart=always
+RestartSec=10
+KillMode=process
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mgap-backend
+
+[Install]
+WantedBy=multi-user.target

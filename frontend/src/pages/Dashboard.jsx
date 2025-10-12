@@ -1,0 +1,274 @@
+import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  MapPinIcon, 
+  CarIcon, 
+  UsersIcon, 
+  ClockIcon 
+} from 'lucide-react';
+import Card from '../components/Card';
+import LoadingSpinner from '../components/LoadingSpinner';
+import NotificationTester from '../components/NotificationTester';
+// import AutoRefreshControl from '../components/AutoRefreshControl';
+// import useAutoRefresh from '../hooks/useAutoRefresh';
+import useDashboardStore from '../store/dashboardStore';
+import useAuthStore from '../store/authStore';
+
+const Dashboard = () => {
+  const { user, canManageUsers, canManageTripsAndVehicles, isAdmin } = useAuthStore();
+  const { stats, upcomingTrips, activeTrips, isLoading, loadDashboard } = useDashboardStore();
+
+  useEffect(() => {
+    console.log('🔄 Dashboard useEffect - cargando datos...');
+    console.log('👤 Usuario actual:', user);
+    console.log('📊 Stats actuales:', stats);
+    console.log('⏳ Is loading:', isLoading);
+    
+    if (user) {
+      console.log('✅ Cargando dashboard para usuario:', user.email);
+      console.log('👥 Rol del usuario:', user.role);
+      console.log('🔒 Es admin?', isAdmin());
+      loadDashboard(user.role).catch(error => {
+        console.error('❌ Error cargando dashboard:', error);
+      });
+    } else {
+      console.warn('⚠️ No hay usuario autenticado');
+    }
+  }, [loadDashboard, user]);
+
+  // Comentado temporalmente para debug
+  // const refreshDashboard = async () => {
+  //   await loadDashboard();
+  // };
+  // const autoRefresh = useAutoRefresh(refreshDashboard, !!user);
+
+  // Render simple para debug
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="mt-2 text-gray-600">Cargando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Test render básico
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <p className="text-red-600">Error: No hay usuario autenticado</p>
+        </div>
+      </div>
+    );
+  }
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('es-UY', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const StatCard = ({ title, value, icon: Icon, color = 'primary' }) => (
+    <Card className="flex items-center p-6">
+      <div className={`p-3 rounded-full bg-${color}-100 mr-4`}>
+        <Icon className={`h-6 w-6 text-${color}-600`} />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+          {title}
+        </p>
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+      </div>
+    </Card>
+  );
+
+  if (isLoading && !stats) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Bienvenido, {user?.name}
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Panel de control - Gestión de Viajes MGAP
+            </p>
+          </div>
+          {/* Control de auto-refresh - Comentado temporalmente para debug */}
+          {/* <AutoRefreshControl
+            isActive={autoRefresh.isActive}
+            countdown={autoRefresh.countdown}
+            lastRefresh={autoRefresh.lastRefresh}
+            onToggle={autoRefresh.toggle}
+            onRefreshNow={autoRefresh.refreshNow}
+            className="mt-1"
+          /> */}
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="Total Viajes"
+            value={stats.overview?.totalTrips || 0}
+            icon={MapPinIcon}
+            color="blue"
+          />
+          <StatCard
+            title="Viajes Activos"
+            value={stats.overview?.activeTrips || 0}
+            icon={ClockIcon}
+            color="green"
+          />
+          <StatCard
+            title="Vehículos en Uso"
+            value={stats.overview?.vehiclesInUse || 0}
+            icon={CarIcon}
+            color="yellow"
+          />
+          {isAdmin() && (
+            <StatCard
+              title="Total Choferes"
+              value={stats.overview?.totalDrivers || 0}
+              icon={UsersIcon}
+              color="purple"
+            />
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Próximos Viajes */}
+        <Card title="Próximos Viajes">
+          {isLoading ? (
+            <LoadingSpinner />
+          ) : Array.isArray(upcomingTrips) && upcomingTrips.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingTrips.map((trip) => (
+                <div
+                  key={trip._id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">{trip.destination}</p>
+                    <p className="text-sm text-gray-500">
+                      {trip.driver?.name} - {formatDate(trip.departureDate)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">{trip.vehicle?.licensePlate}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">
+              No hay viajes próximos programados
+            </p>
+          )}
+        </Card>
+
+        {/* Viajes Activos */}
+        <Card title="Viajes en Curso">
+          {isLoading ? (
+            <LoadingSpinner />
+          ) : Array.isArray(activeTrips) && activeTrips.length > 0 ? (
+            <div className="space-y-3">
+              {activeTrips.map((trip) => (
+                <div
+                  key={trip._id}
+                  className="flex items-center justify-between p-3 bg-green-50 rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">{trip.destination}</p>
+                    <p className="text-sm text-gray-500">
+                      {trip.driver?.name} - {formatDate(trip.departureDate)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      En curso
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">
+              No hay viajes en curso
+            </p>
+          )}
+        </Card>
+      </div>
+
+      {/* Accesos rápidos */}
+      <Card title="Accesos Rápidos">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Link
+            to="/trips"
+            className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <MapPinIcon className="h-8 w-8 text-blue-600 mb-2" />
+            <h3 className="font-medium text-gray-900">Gestionar Viajes</h3>
+            <p className="text-sm text-gray-500">Ver y crear nuevos viajes</p>
+          </Link>
+
+          {canManageTripsAndVehicles() && (
+            <Link
+              to="/vehicles"
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <CarIcon className="h-8 w-8 text-green-600 mb-2" />
+              <h3 className="font-medium text-gray-900">Vehículos</h3>
+              <p className="text-sm text-gray-500">Administrar flota de vehículos</p>
+            </Link>
+          )}
+
+          {/* Admin principal ve gestión completa de usuarios */}
+          {canManageUsers() && (
+            <Link
+              to="/users"
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <UsersIcon className="h-8 w-8 text-purple-600 mb-2" />
+              <h3 className="font-medium text-gray-900">Usuarios</h3>
+              <p className="text-sm text-gray-500">Gestionar choferes y admins</p>
+            </Link>
+          )}
+          
+          {/* Administrativos pueden ver lista de choferes para asignaciones */}
+          {!canManageUsers() && canManageTripsAndVehicles() && (
+            <Link
+              to="/drivers"
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <UsersIcon className="h-8 w-8 text-purple-600 mb-2" />
+              <h3 className="font-medium text-gray-900">Choferes</h3>
+              <p className="text-sm text-gray-500">Ver choferes disponibles</p>
+            </Link>
+          )}
+        </div>
+      </Card>
+
+      {/* Componente de prueba de notificaciones */}
+      <NotificationTester />
+    </div>
+  );
+};
+
+export default Dashboard;
