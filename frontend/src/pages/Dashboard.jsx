@@ -105,7 +105,10 @@ const Dashboard = () => {
               Bienvenido, {user?.name}
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              Panel de control - Gestión de Viajes MGAP
+              {user?.role === 'chofer' 
+                ? 'Aquí puedes ver tus viajes asignados'
+                : 'Panel de control - Gestión de Viajes MGAP'
+              }
             </p>
           </div>
           {/* Control de auto-refresh - Comentado temporalmente para debug */}
@@ -120,8 +123,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      {stats && (
+      {/* Stats Cards - Solo para administradores */}
+      {stats && user?.role !== 'chofer' && (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Viajes"
@@ -154,7 +157,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Próximos Viajes */}
-        <Card title="Próximos Viajes">
+        <Card title={user?.role === 'chofer' ? 'Mis Próximos Viajes' : 'Próximos Viajes'}>
           {isLoading ? (
             <LoadingSpinner />
           ) : Array.isArray(upcomingTrips) && upcomingTrips.length > 0 ? (
