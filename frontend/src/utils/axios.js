@@ -2,10 +2,10 @@ import axios from 'axios';
 
 // Detectar entorno y configurar URL base apropiada
 const getBaseURL = () => {
-  // Si estamos en producción (Vercel)
+  // Si estamos en producción (Vercel) - usar IP local directamente por ahora
   if (window.location.hostname.includes('vercel.app') || 
       window.location.hostname.includes('vercel.com')) {
-    return 'https://cirrate-salubriously-mathilde.ngrok-free.dev/api';
+    return 'http://192.168.1.8:5001/api';
   }
   
   // Si estamos en desarrollo y accediendo desde la IP local  
@@ -28,13 +28,19 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Interceptor para agregar token de autenticación
+// Interceptor para agregar token de autenticación y headers de ngrok
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Agregar header para evitar la página de confirmación de ngrok
+    if (config.baseURL && config.baseURL.includes('ngrok-free.dev')) {
+      config.headers['ngrok-skip-browser-warning'] = 'true';
+    }
+    
     return config;
   },
   (error) => {
