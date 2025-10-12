@@ -2,10 +2,10 @@ import axios from 'axios';
 
 // Detectar entorno y configurar URL base apropiada
 const getBaseURL = () => {
-  // Si estamos en producción (Vercel) - usar IP local directamente por ahora
+  // Si estamos en producción (Vercel)
   if (window.location.hostname.includes('vercel.app') || 
       window.location.hostname.includes('vercel.com')) {
-    return 'http://192.168.1.8:5001/api';
+    return 'https://cirrate-salubriously-mathilde.ngrok-free.dev/api';
   }
   
   // Si estamos en desarrollo y accediendo desde la IP local  
