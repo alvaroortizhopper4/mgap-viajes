@@ -1,5 +1,5 @@
 // Service Worker para PWA
-const CACHE_NAME = 'mgap-viajes-v2';
+const CACHE_NAME = 'mgap-viajes-v3';
 const urlsToCache = [
   '/',
   '/manifest.json'
