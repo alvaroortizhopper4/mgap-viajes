@@ -9,7 +9,7 @@ const {
   getAvailableVehicles,
   vehicleValidation
 } = require('../controllers/vehicleController');
-const { auth, authorize, requireAdminOrAdministrativo } = require('../middleware/auth');
+const { auth, authorize, requireAdminPrincipal } = require('../middleware/auth');
 const handleValidationErrors = require('../middleware/validation');
 
 // @route   GET /api/vehicles/available
@@ -29,10 +29,10 @@ router.get('/:id', auth, getVehicleById);
 
 // @route   POST /api/vehicles
 // @desc    Crear nuevo vehículo
-// @access  Private (admin principal y administrativo)
+// @access  Private (solo admin principal)
 router.post('/', 
   auth,
-  requireAdminOrAdministrativo,
+  requireAdminPrincipal,
   vehicleValidation,
   handleValidationErrors,
   createVehicle
@@ -40,10 +40,10 @@ router.post('/',
 
 // @route   PUT /api/vehicles/:id
 // @desc    Actualizar vehículo
-// @access  Private (admin principal y administrativo)
+// @access  Private (solo admin principal)
 router.put('/:id', 
   auth,
-  requireAdminOrAdministrativo,
+  requireAdminPrincipal,
   vehicleValidation,
   handleValidationErrors,
   updateVehicle
@@ -51,10 +51,10 @@ router.put('/:id',
 
 // @route   DELETE /api/vehicles/:id
 // @desc    Eliminar vehículo
-// @access  Private (admin principal y administrativo)
+// @access  Private (solo admin principal)
 router.delete('/:id', 
   auth,
-  requireAdminOrAdministrativo,
+  requireAdminPrincipal,
   deleteVehicle
 );
 

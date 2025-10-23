@@ -4,9 +4,21 @@ const {
   getDashboardStats,
   getUpcomingTrips,
   getActiveTrips,
-  getVehiclesSummary
+  getVehiclesSummary,
+  getWeeklyTrips,
+  getDailyTrips
 } = require('../controllers/dashboardController');
 const { auth, authorize } = require('../middleware/auth');
+
+// @route   GET /api/dashboard/daily-trips
+// @desc    Obtener historial diario de viajes (admin)
+// @access  Private (admin)
+router.get('/daily-trips', auth, authorize('admin', 'super_admin'), getDailyTrips);
+
+// @route   GET /api/dashboard/weekly-trips
+// @desc    Obtener historial semanal de viajes completados (chofer)
+// @access  Private
+router.get('/weekly-trips', auth, getWeeklyTrips);
 
 // @route   GET /api/dashboard/stats
 // @desc    Obtener estadísticas del dashboard

@@ -184,13 +184,9 @@ const deleteUser = async (req, res) => {
 // @access  Private
 const getDrivers = async (req, res) => {
   try {
-    const drivers = await User.find({ 
-      role: 'chofer', 
-      isActive: true 
-    })
-    .select('name employeeId phone department')
-    .sort({ name: 1 });
-
+    const drivers = await User.find({ role: 'chofer' })
+      .select('name employeeId phone department isActive reactivationDate')
+      .sort({ name: 1 });
     res.json(drivers);
   } catch (error) {
     console.error('Error obteniendo choferes:', error);

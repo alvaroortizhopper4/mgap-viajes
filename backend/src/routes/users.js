@@ -9,7 +9,7 @@ const {
   getDrivers,
   userValidation
 } = require('../controllers/userController');
-const { auth, authorize, canManageUsers, requireAdminOrAdministrativo } = require('../middleware/auth');
+const { auth, authorize, canManageUsers, requireAdminOrAdministrativo, canEditUsers } = require('../middleware/auth');
 const handleValidationErrors = require('../middleware/validation');
 
 // @route   GET /api/users/drivers
@@ -37,14 +37,14 @@ router.get('/',
 // @route   GET /api/users/:id
 // @desc    Obtener usuario por ID
 // @access  Private (solo admin principal)
-router.get('/:id', auth, canManageUsers, getUserById);
+router.get('/:id', auth, canEditUsers, getUserById);
 
 // @route   PUT /api/users/:id
 // @desc    Actualizar usuario
 // @access  Private (solo admin principal)
 router.put('/:id', 
   auth,
-  canManageUsers,
+  canEditUsers,
   userValidation,
   handleValidationErrors,
   updateUser

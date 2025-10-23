@@ -114,11 +114,23 @@ const canManageUsers = (req, res, next) => {
   next();
 };
 
+// Permite que admin_principal y administrativo editen usuarios
+const canEditUsers = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Usuario no autenticado' });
+  }
+  if (req.user.role !== 'admin_principal' && req.user.role !== 'administrativo') {
+    return res.status(403).json({ message: 'No tienes permisos para editar usuarios' });
+  }
+  next();
+};
+
 module.exports = {
   auth,
   authorize,
   isOwnerOrAdmin,
   requireAdminPrincipal,
   requireAdminOrAdministrativo,
-  canManageUsers
+  canManageUsers,
+  canEditUsers
 };

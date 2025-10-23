@@ -19,6 +19,8 @@ const allowedOrigins = [
   'http://192.168.1.8:3001',
   'http://192.168.1.10:3000',
   'http://192.168.1.10:3001',
+  'http://192.168.1.24:3000',
+  'http://192.168.1.24:3001',
   // Vercel Hosting
   /\.vercel\.app$/,
   /\.vercel\.com$/,
@@ -27,6 +29,8 @@ const allowedOrigins = [
   /\.ngrok-free\.app$/,
   /\.ngrok-free\.dev$/
 ];
+// Habilitar preflight OPTIONS para todas las rutas
+app.options('*', cors());
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -77,8 +81,8 @@ app.listen(PORT, '0.0.0.0', () => {
   const { initializeFirebase } = require('./services/notificationService');
   initializeFirebase();
   
-  // SCHEDULER DESACTIVADO - No se ejecutará automáticamente
-  // const tripScheduler = require('./services/tripScheduler');
-  // tripScheduler.start();
-  console.log('📴 Scheduler automático desactivado');
+  // SCHEDULER ACTIVADO - Los viajes se iniciarán automáticamente
+  const tripScheduler = require('./services/tripScheduler');
+  tripScheduler.start();
+  console.log('⏰ Scheduler automático ACTIVADO');
 });
