@@ -1,5 +1,5 @@
 // Service Worker para PWA
-const CACHE_NAME = 'mgap-viajes-v3';
+const CACHE_NAME = 'mgap-viajes-v4'; // Incrementa en cada deploy
 const urlsToCache = [
   '/',
   '/manifest.json'
@@ -7,6 +7,7 @@ const urlsToCache = [
 
 // Instalación del service worker
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Forzar activación inmediata
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -28,22 +29,36 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
 // Interceptar requests de red
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Cache hit - devolver respuesta
+        // Si hay cache, devolverla
         if (response) {
           return response;
         }
-        return fetch(event.request);
-      }
-    )
+        // Si no, buscar en red y actualizar cache
+        return fetch(event.request).then((networkResponse) => {
+          // Solo cachear archivos del mismo origen
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return networkResponse;
+        });
+      })
+      .catch(() => {
+        // Si falla todo, mostrar fallback opcional
+        // return caches.match('/offline.html');
+      })
   );
 });
 
