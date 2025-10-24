@@ -178,11 +178,14 @@ const createTrip = async (req, res) => {
       .populate('vehicle', 'licensePlate brand model')
       .populate('createdBy', 'name');
 
+
     // Enviar notificación al chofer asignado SIEMPRE
     try {
       const { sendTripAssignmentNotification } = require('../services/notificationService');
       const Notification = require('../models/Notification');
-      
+      const { sendWhatsAppMessage } = require('../services/whatsappService');
+      const User = require('../models/User');
+
       // Crear notificación en la base de datos
       await Notification.create({
         userId: driver,
@@ -200,7 +203,37 @@ const createTrip = async (req, res) => {
 
       // Enviar notificación push
       await sendTripAssignmentNotification(driver, populatedTrip);
-      
+
+      // Enviar WhatsApp solo si el viaje es programado por admin
+      if (req.user.role === 'admin_principal' || req.user.role === 'administrativo') {
+        // Buscar el chofer para obtener el teléfono
+        const chofer = await User.findById(driver);
+        if (chofer && chofer.phone) {
+          const mensaje = `*Nuevo Viaje Asignado*
+
+Hola ${chofer.name},
+
+Tienes un nuevo viaje programado:
+
+• *Destino:* ${destination}
+• *Fecha de salida:* ${new Date(departureDate).toLocaleDateString('es-UY')}
+• *Hora de salida:* ${departureTime || 'A confirmar'}
+
+Por favor, revisa la app para más detalles y confirma tu disponibilidad.
+
+¡Buen viaje!`;
+
+          try {
+            await sendWhatsAppMessage(chofer.phone, mensaje);
+            console.log(`✅ WhatsApp enviado a ${chofer.name} (${chofer.phone})`);
+          } catch (whatsErr) {
+            console.error('Error enviando WhatsApp:', whatsErr);
+          }
+        } else {
+          console.warn('El chofer no tiene teléfono registrado para WhatsApp.');
+        }
+      }
+
       console.log(`📱 Notificación enviada al chofer ${populatedTrip.driver.name} para viaje ${trip._id}`);
     } catch (notificationError) {
       console.error('Error enviando notificación:', notificationError);

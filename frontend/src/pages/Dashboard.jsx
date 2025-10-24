@@ -194,7 +194,19 @@ const Dashboard = () => {
         <>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard title="Total Viajes" value={stats.overview?.totalTrips || 0} icon={MapPinIcon} color="blue" />
-            <StatCard title="Viajes Activos" value={stats.overview?.activeTrips || 0} icon={ClockIcon} color="green" showAnimatedCars={true} />
+            {/*
+              NOTA: El endpoint de estadísticas puede devolver un conteo desfasado respecto a los viajes activos en tiempo real,
+              ya que la animación y la lista de viajes usan fuentes distintas. Usamos el máximo entre el valor de stats y la longitud
+              del array activeTrips para evitar que el contador quede en cero mientras la animación ya muestra autos en curso.
+            */}
+            <StatCard
+              title="Viajes Activos"
+              value={Math.max(stats?.overview?.activeTrips || 0, Array.isArray(activeTrips) ? activeTrips.length : 0)}
+              icon={ClockIcon}
+              color="green"
+            >
+              <AnimatedCars height="4.2rem" compact />
+            </StatCard>
             {user.role === 'super_admin' && (
               <StatCard title="Vehículos en Uso" value={stats.overview?.vehiclesInUse || 0} icon={CarIcon} color="yellow" />
             )}

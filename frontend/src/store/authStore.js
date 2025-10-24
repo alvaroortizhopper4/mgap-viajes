@@ -45,6 +45,7 @@ const useAuthStore = create(
       
       // Logout
       logout: () => {
+        console.log('[LOGOUT] Eliminando token y usuario de localStorage (logout manual)');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         set({ 

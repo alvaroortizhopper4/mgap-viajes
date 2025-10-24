@@ -1,6 +1,7 @@
 // Configuración Firebase para notificaciones web
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
+import api from './utils/axios';
 
 // Configuración mock - reemplaza con tus credenciales reales de Firebase
 const firebaseConfig = {
@@ -12,8 +13,8 @@ const firebaseConfig = {
   appId: "1:123456789:web:abcdef"
 };
 
-// VAPID Key para notificaciones push (también mock)
-const vapidKey = "mock-vapid-key";
+// VAPID Key para notificaciones push (reemplaza por la real de Firebase)
+const vapidKey = "TU_VAPID_KEY";
 
 let app = null;
 let messaging = null;
@@ -39,53 +40,48 @@ const initializeFirebase = async () => {
   }
 };
 
-// Solicitar permisos de notificación
+// Solicitar permisos de notificación y obtener token FCM real
 const requestNotificationPermission = async () => {
   try {
-    // Verificar soporte del navegador
     if (!('Notification' in window)) {
       console.log('Este navegador no soporta notificaciones');
       return { success: false, error: 'Navegador no compatible' };
     }
 
-    // Detectar tipo de dispositivo
-    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    console.log('📱 Dispositivo detectado:', isMobile ? 'Móvil' : 'Desktop');
-    console.log('🌐 User Agent:', navigator.userAgent);
-
-    // Verificar estado actual de permisos
     const currentPermission = Notification.permission;
-    console.log('🔔 Estado actual de notificaciones:', currentPermission);
-
     if (currentPermission === 'denied') {
-      console.log('❌ Permisos denegados previamente');
       return { success: false, error: 'Permisos denegados previamente' };
     }
 
-    // Solicitar permiso si es necesario
     let permission = currentPermission;
     if (currentPermission === 'default') {
       permission = await Notification.requestPermission();
-      console.log('Resultado de solicitud de permisos:', permission);
     }
-    
+
     if (permission === 'granted') {
-      console.log('Permisos de notificación concedidos');
-      
-      // Generar token mock
-      const mockToken = `mock-token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      console.log('Usando token mock:', mockToken);
-      return { 
-        success: true, 
-        token: mockToken,
-        mock: true 
-      };
+      // Obtener token FCM real
+      if (!messaging) {
+        await initializeFirebase();
+      }
+      try {
+        const token = await getToken(messaging, { vapidKey });
+        console.log('Token FCM obtenido:', token);
+        // Enviar el token al backend para asociarlo al usuario
+        try {
+          await api.post('/notifications/register-token', { token });
+          console.log('Token FCM registrado en backend');
+        } catch (err) {
+          console.error('Error registrando token en backend:', err);
+        }
+        return { success: true, token, mock: false };
+      } catch (err) {
+        console.error('No se pudo obtener el token FCM', err);
+        return { success: false, error: err.message };
+      }
     } else {
-      console.log('Permisos de notificación denegados');
       return { success: false, error: 'Permisos denegados' };
     }
   } catch (error) {
-    console.error('Error solicitando permisos:', error);
     return { success: false, error: error.message };
   }
 };

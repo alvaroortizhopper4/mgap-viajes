@@ -126,6 +126,15 @@ const tripSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Control de recordatorios por WhatsApp
+  whatsappConfirmationReminderSent: {
+    type: Boolean,
+    default: false
+  },
+  whatsappPreTripReminderSent: {
+    type: Boolean,
+    default: false
+  },
   finishedAt: {
     type: Date
   },

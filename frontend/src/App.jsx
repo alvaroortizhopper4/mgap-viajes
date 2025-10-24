@@ -111,20 +111,23 @@ function App() {
     }
   }, [isAuthenticated, user]);
 
+  // Notificación de bienvenida solo una vez por sesión/login
   React.useEffect(() => {
     if (isAuthenticated() && user) {
-      // console.log('🔔 Usuario logueado, solicitando permisos de notificación...');
+      // Solo mostrar la notificación si no se ha mostrado en este login
+      const alreadyWelcomed = sessionStorage.getItem('welcome-notification-shown');
       requestPermissionOnLogin();
-      
-      // Si ya tiene permisos, enviar una notificación de bienvenida
-      setTimeout(() => {
-        if (isGranted) {
+      if (!alreadyWelcomed && isGranted) {
+        setTimeout(() => {
           sendTestNotification(
-            `¡Bienvenido ${user.name}!`, 
+            `¡Bienvenido ${user.name}!`,
             'Las notificaciones están activas. Recibirás alertas importantes aquí.'
           );
-        }
-      }, 3000); // 3 segundos después del login
+          sessionStorage.setItem('welcome-notification-shown', 'true');
+        }, 3000);
+      }
+    } else {
+      sessionStorage.removeItem('welcome-notification-shown');
     }
   }, [isAuthenticated, user, requestPermissionOnLogin, sendTestNotification, isGranted]);
 

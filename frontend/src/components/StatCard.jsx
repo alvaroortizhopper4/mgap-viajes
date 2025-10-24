@@ -9,7 +9,8 @@ const colorMap = {
   red: "bg-red-100 text-red-800",
 };
 
-const StatCard = ({ title, value, icon: Icon, color = "blue", showAnimatedCars }) => {
+
+const StatCard = ({ title, value, icon: Icon, color = "blue", children }) => {
   return (
     <div className="flex items-center p-4 bg-white rounded-lg shadow border border-gray-100 relative min-h-[3.5rem]">
       {Icon && (
@@ -21,9 +22,10 @@ const StatCard = ({ title, value, icon: Icon, color = "blue", showAnimatedCars }
         <div className="text-2xl font-bold text-gray-900">{value}</div>
         <div className="text-sm text-gray-500">{title}</div>
       </div>
-      {showAnimatedCars && (
+      {/* Renderiza contenido adicional (por ejemplo, animación) */}
+      {children && (
         <div className="absolute right-2 top-1/2 -translate-y-1/2 w-40 md:w-60 max-w-[60%] h-24 flex items-center overflow-visible">
-          <AnimatedCars height="4.2rem" compact />
+          {children}
         </div>
       )}
     </div>
