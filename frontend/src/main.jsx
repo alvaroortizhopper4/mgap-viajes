@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import GlobalErrorBoundary from './components/GlobalErrorBoundary.jsx';
+import ToastProvider from './contexts/ToastContext.jsx';
 import './index.css'
 
 // Registrar Service Worker para PWA
@@ -18,6 +20,10 @@ if ('serviceWorker' in navigator) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <GlobalErrorBoundary>
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    </GlobalErrorBoundary>
   </React.StrictMode>,
 )

@@ -30,6 +30,7 @@ const Users = () => {
   
   const { canManageUsers } = useAuthStore();
   
+
   const {
     register,
     handleSubmit,
@@ -38,6 +39,9 @@ const Users = () => {
     setValue,
     watch,
   } = useForm();
+
+  // Estado local para el submit del formulario
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     getUsers();
@@ -54,16 +58,20 @@ const Users = () => {
 
 
   const handleCreateUser = async (data) => {
+    setIsSubmitting(true);
     try {
       await createUser(data);
       setIsCreateModalOpen(false);
       reset();
     } catch (error) {
       console.error('Error creating user:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditUser = async (data) => {
+    setIsSubmitting(true);
     try {
       // Convertir isActive de string a boolean
       const userData = {
@@ -75,12 +83,10 @@ const Users = () => {
         department: data.department,
         isActive: data.isActive === 'true'
       };
-      
       // Solo incluir la contraseña si se marcó la opción de cambiarla
       if (changePassword && data.password) {
         userData.password = data.password;
       }
-      
       await updateUser(selectedUser._id, userData);
       setIsEditModalOpen(false);
       setSelectedUser(null);
@@ -88,6 +94,8 @@ const Users = () => {
       reset();
     } catch (error) {
       console.error('Error updating user:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -356,7 +364,7 @@ const Users = () => {
         >
           Cancelar
         </Button>
-        <Button type="submit" loading={isLoading}>
+        <Button type="submit" loading={isSubmitting}>
           {isEdit ? 'Actualizar' : 'Crear'} Usuario
         </Button>
       </div>

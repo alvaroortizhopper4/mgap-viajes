@@ -26,19 +26,14 @@ export const ToastProvider = ({ children }) => {
   }, []);
 
   const showToast = useCallback((notification, options = {}) => {
-    // Verificar si ya existe un toast idéntico reciente (últimos 2 segundos)
-    const now = Date.now();
-    const existingToast = toasts.find(toast => 
-      toast.notification.title === notification.title &&
-      toast.notification.body === notification.body &&
-      (now - toast.id) < 2000 // Dentro de los últimos 2 segundos
-    );
-
-    if (existingToast) {
-      console.log('🚫 Toast duplicado detectado, ignorando:', notification.title);
-      return existingToast.id;
+    // Evitar duplicados por ID de notificación
+    if (notification && notification._id) {
+      const exists = toasts.some(toast => toast.notification && toast.notification._id === notification._id);
+      if (exists) {
+        console.log('🚫 Toast duplicado detectado por ID, ignorando:', notification._id);
+        return null;
+      }
     }
-
     const id = Date.now() + Math.random();
     const newToast = {
       id,
@@ -46,16 +41,10 @@ export const ToastProvider = ({ children }) => {
       duration: options.duration || 5000,
       ...options
     };
-
-    console.log('🍞 Mostrando toast:', notification.title);
-
     setToasts(prev => [...prev, newToast]);
-
-    // Auto-remover después de la duración + tiempo de animación
     setTimeout(() => {
       setToasts(prev => prev.filter(toast => toast.id !== id));
     }, newToast.duration + 500);
-
     return id;
   }, [toasts]);
 
@@ -78,13 +67,13 @@ export const ToastProvider = ({ children }) => {
     <ToastContext.Provider value={value}>
       {children}
       
-      {/* Container de Toasts - Centrado */}
-      <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center p-4">
-        <div className="space-y-3 w-full max-w-sm">
+      {/* Container de Toasts - Centrado y adaptativo */}
+      <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center p-2 sm:p-4">
+        <div className="space-y-3 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg flex flex-col items-center mx-auto">
           {toasts.map((toast, index) => (
             <div
               key={toast.id}
-              className="pointer-events-auto w-full"
+              className="pointer-events-auto w-full flex justify-center"
               style={{
                 transform: `translateY(${index * 10}px)`,
                 zIndex: 1000 - index

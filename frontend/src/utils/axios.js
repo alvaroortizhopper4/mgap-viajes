@@ -8,8 +8,8 @@ const getBaseURL = () => {
     return 'https://cirrate-salubriously-mathilde.ngrok-free.dev/api';
   }
   
-  // Si estamos en desarrollo y accediendo desde la IP local  
-  if (window.location.hostname === '192.168.1.8' || window.location.hostname === '192.168.1.10') {
+  // Si estamos en desarrollo y accediendo desde cualquier IP local 192.168.x.x
+  if (/^192\.168\./.test(window.location.hostname)) {
     return `http://${window.location.hostname}:5001/api`;
   }
   

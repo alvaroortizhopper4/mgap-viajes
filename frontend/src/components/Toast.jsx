@@ -5,27 +5,12 @@ const Toast = ({ notification, onClose, onConfirm, duration = 5000 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
-  // Función para reproducir sonido de notificación
+  // Función para reproducir sonido de bocina
   const playNotificationSound = () => {
     try {
-      // Crear un sonido usando Web Audio API
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // Configurar el sonido (tono agradable)
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-      
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.2, audioContext.currentTime + 0.05);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
+      const audio = new window.Audio('/horn.mp3');
+      audio.volume = 0.7;
+      audio.play();
     } catch (error) {
       console.log('No se pudo reproducir sonido:', error);
     }

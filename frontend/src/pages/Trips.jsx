@@ -274,6 +274,20 @@ const Trips = () => {
       ),
     },
     {
+      key: 'createdBy',
+      header: 'Creado por',
+      render: (trip) => (
+        <div>
+          <div className="font-medium text-gray-900">
+            {trip.createdBy?.name || 'Desconocido'}
+          </div>
+          <div className="text-xs text-gray-500">
+            {trip.createdAt ? new Date(trip.createdAt).toLocaleString('es-UY', {hour: '2-digit', minute: '2-digit', hour12: false}) : ''}
+          </div>
+        </div>
+      ),
+    },
+    {
       key: 'vehicle',
       header: 'Vehículo',
       render: (trip) => (
@@ -311,7 +325,7 @@ const Trips = () => {
                 <div>
                   <Badge variant="success">✓ Confirmado</Badge>
                   <div className="text-xs text-gray-500">
-                    {new Date(trip.driverConfirmation.confirmedAt).toLocaleDateString('es-UY')}
+                    {new Date(trip.driverConfirmation.confirmedAt).toLocaleDateString('es-UY')} {new Date(trip.driverConfirmation.confirmedAt).toLocaleTimeString('es-UY', {hour: '2-digit', minute: '2-digit', hour12: false})}
                   </div>
                 </div>
               ) : (
@@ -355,7 +369,7 @@ const Trips = () => {
               <Badge variant="success">🏁 Completado</Badge>
               {trip.finishedAt && (
                 <div className="text-xs text-gray-500">
-                  {new Date(trip.finishedAt).toLocaleDateString('es-UY')} {new Date(trip.finishedAt).toLocaleTimeString('es-UY', {hour: '2-digit', minute: '2-digit'})}
+                  {new Date(trip.finishedAt).toLocaleDateString('es-UY')} {new Date(trip.finishedAt).toLocaleTimeString('es-UY', {hour: '2-digit', minute: '2-digit', hour12: false})}
                 </div>
               )}
             </div>
@@ -390,7 +404,7 @@ const Trips = () => {
   ];
 
   // Filtrar viajes
-  const filteredTrips = trips.filter((trip) => {
+  let filteredTrips = trips.filter((trip) => {
     const matchesSearch = !filters.search || 
       trip.destination.toLowerCase().includes(filters.search.toLowerCase()) ||
       trip.purpose.toLowerCase().includes(filters.search.toLowerCase());
@@ -400,6 +414,14 @@ const Trips = () => {
     const matchesDriver = !filters.driver || trip.driver?._id === filters.driver;
     
     return matchesSearch && matchesStatus && matchesDriver;
+  });
+
+  // Ordenar: primero los viajes por confirmar (status 'programado' y !driverConfirmation?.confirmed)
+  filteredTrips = filteredTrips.sort((a, b) => {
+    const aPorConfirmar = a.status === 'programado' && !(a.driverConfirmation && a.driverConfirmation.confirmed);
+    const bPorConfirmar = b.status === 'programado' && !(b.driverConfirmation && b.driverConfirmation.confirmed);
+    if (aPorConfirmar === bPorConfirmar) return 0;
+    return aPorConfirmar ? -1 : 1;
   });
 
   // Verificar si el usuario está cargado
@@ -454,13 +476,22 @@ const Trips = () => {
               value={filters.driver}
               onChange={(e) => setFilters(prev => ({ ...prev, driver: e.target.value }))}
               className="input-field"
+              disabled={isDriver()}
             >
-              <option value="">Todos los choferes</option>
-              {drivers && drivers.map((driver) => (
-                <option key={driver._id} value={driver._id}>
-                  {driver.name}
-                </option>
-              ))}
+              {canManageTripsAndVehicles() ? (
+                <>
+                  <option value="">Todos los choferes</option>
+                  {drivers && drivers.map((driver) => (
+                    <option key={driver._id} value={driver._id}>
+                      {driver.name}
+                    </option>
+                  ))}
+                </>
+              ) : (
+                user && (
+                  <option value={user._id}>{user.name}</option>
+                )
+              )}
             </select>
           </div>
           
@@ -542,11 +573,13 @@ const Trips = () => {
                   onClick={() => {
                     const newOneDayState = !isOneDayTrip;
                     setIsOneDayTrip(newOneDayState);
-                    
                     if (newOneDayState) {
-                      // Activar modo "viaje de un día" - establecer fecha de hoy en ambos campos (local)
+                      // Activar modo "viaje de un día" - establecer fecha de hoy en ambos campos (local, formato YYYY-MM-DD)
                       const now = new Date();
-                      const todayLocal = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+                      const yyyy = now.getFullYear();
+                      const mm = String(now.getMonth() + 1).padStart(2, '0');
+                      const dd = String(now.getDate()).padStart(2, '0');
+                      const todayLocal = `${yyyy}-${mm}-${dd}`;
                       setValue('departureDate', todayLocal);
                       setValue('returnDate', todayLocal);
                     } else {
@@ -590,6 +623,8 @@ const Trips = () => {
               </label>
               <Input
                 type="time"
+                step="60"
+                placeholder="HH:mm"
                 {...register('departureTime', { 
                   required: 'La hora de salida es requerida' 
                 })}
@@ -603,11 +638,12 @@ const Trips = () => {
               </label>
               <Input
                 type="time"
+                step="60"
+                placeholder="HH:mm"
                 {...register('returnTime')}
                 error={errors.returnTime?.message}
                 disabled={true}
                 className="bg-gray-100 cursor-not-allowed"
-                placeholder="Se determina al finalizar el viaje"
               />
               <p className="text-xs text-gray-500 mt-1">
                 La hora de regreso se establecerá automáticamente cuando el chofer finalice el viaje
@@ -659,16 +695,7 @@ const Trips = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de Pasajeros
-              </label>
-              <Input
-                type="number"
-                min="1"
-                {...register('passengers')}
-                placeholder="Número de pasajeros"
-                error={errors.passengers?.message}
-              />
+              {/* Campo de pasajeros eliminado */}
             </div>
 
             <div>

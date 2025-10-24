@@ -13,13 +13,13 @@ const AutoRefreshControl = ({
   };
 
   const formatLastRefresh = (date) => {
-    if (!date) return 'Nunca';
-    const now = new Date();
-    const diff = Math.floor((now - date) / 1000);
+  if (!date) return 'Nunca';
+  const now = new Date();
+  const diff = Math.floor((now - date) / 1000);
     
-    if (diff < 60) return `Hace ${diff}s`;
-    if (diff < 3600) return `Hace ${Math.floor(diff / 60)}min`;
-    return date.toLocaleTimeString();
+  if (diff < 60) return `Hace ${diff}s`;
+  if (diff < 3600) return `Hace ${Math.floor(diff / 60)}min`;
+  return date.toLocaleTimeString('es-UY', {hour: '2-digit', minute: '2-digit', hour12: false});
   };
 
   return (

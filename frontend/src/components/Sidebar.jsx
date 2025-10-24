@@ -1,16 +1,8 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  HomeIcon, 
-  CarIcon, 
-  UsersIcon, 
-  MapPinIcon,
-  LogOutIcon,
-  MenuIcon,
-  XIcon
-} from 'lucide-react';
+// ...existing code...
 import NotificationBell from './NotificationBell';
 import useAuthStore from '../store/authStore';
+import { useNavigate, NavLink } from 'react-router-dom';
+import { HomeIcon, CarIcon, UsersIcon, MapPinIcon, LogOutIcon, MenuIcon, XIcon } from 'lucide-react';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const { user, logout, canManageUsers, canManageTripsAndVehicles } = useAuthStore();
@@ -49,6 +41,15 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       name: 'Usuarios',
       href: '/users',
       icon: UsersIcon,
+    });
+  }
+
+  // Dashboard avanzado solo para admin
+  if (user?.role === 'admin' || user?.role === 'super_admin') {
+    menuItems.push({
+      name: 'Panel Avanzado',
+      href: '/admin-advanced',
+      icon: MapPinIcon,
     });
   }
 

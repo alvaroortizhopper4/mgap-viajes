@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import api from '../utils/axios';
 import toast from 'react-hot-toast';
@@ -8,6 +9,44 @@ const useDashboardStore = create((set, get) => ({
   activeTrips: [],
   vehiclesSummary: null,
   isLoading: false,
+  weeklyTrips: [],
+
+  dailyTrips: { activeTrips: [], completedTrips: [] },
+
+  // Obtener historial diario de viajes (admin)
+  getDailyTrips: async () => {
+    try {
+      console.log('🌐 Haciendo request a /dashboard/daily-trips...');
+      const response = await api.get('/dashboard/daily-trips');
+      console.log('✅ Historial diario recibido:', response.data);
+      set({ dailyTrips: response.data });
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error obteniendo historial diario:', error);
+      console.error('📄 Detalles del error:', error.response?.data);
+      set({ dailyTrips: { activeTrips: [], completedTrips: [] } });
+      toast.error('Error al cargar historial diario');
+      throw error;
+    }
+  },
+
+  // Obtener historial semanal de viajes completados (chofer)
+  getWeeklyTrips: async () => {
+    try {
+      console.log('🌐 Haciendo request a /dashboard/weekly-trips...');
+      const response = await api.get('/dashboard/weekly-trips');
+      console.log('✅ Historial semanal recibido:', response.data);
+      const trips = Array.isArray(response.data) ? response.data : [];
+      set({ weeklyTrips: trips });
+      return trips;
+    } catch (error) {
+      console.error('❌ Error obteniendo historial semanal:', error);
+      console.error('📄 Detalles del error:', error.response?.data);
+      set({ weeklyTrips: [] });
+      toast.error('Error al cargar historial semanal');
+      throw error;
+    }
+  },
   
   // Obtener estadísticas del dashboard
   getDashboardStats: async () => {

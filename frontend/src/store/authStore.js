@@ -92,7 +92,8 @@ const useAuthStore = create(
       // Verificar si está autenticado
       isAuthenticated: () => {
         const { token, user } = get();
-        return !!(token && user);
+        // Solo autenticado si el usuario existe, tiene token y está activo
+        return !!(token && user && user.isActive !== false);
       },
       
       // Verificar si es admin principal

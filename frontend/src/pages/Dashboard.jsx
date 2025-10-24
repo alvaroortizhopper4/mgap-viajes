@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   MapPinIcon, 
@@ -6,222 +6,87 @@ import {
   UsersIcon, 
   ClockIcon 
 } from 'lucide-react';
+import { format } from 'date-fns';
 import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AnimatedCars from '../components/AnimatedCars';
-// import AutoRefreshControl from '../components/AutoRefreshControl';
-// import useAutoRefresh from '../hooks/useAutoRefresh';
 import useDashboardStore from '../store/dashboardStore';
 import useAuthStore from '../store/authStore';
+import StatCard from '../components/StatCard';
 
 const Dashboard = () => {
   const { user, canManageUsers, canManageTripsAndVehicles, isAdmin } = useAuthStore();
-  const { stats, upcomingTrips, activeTrips, isLoading, loadDashboard } = useDashboardStore();
+  const { stats, upcomingTrips, activeTrips, isLoading, loadDashboard, getWeeklyTrips, weeklyTrips, getDailyTrips, dailyTrips } = useDashboardStore();
+  const pollingRef = useRef();
 
   useEffect(() => {
-    console.log('🔄 Dashboard useEffect - cargando datos...');
-    console.log('👤 Usuario actual:', user);
-    console.log('📊 Stats actuales:', stats);
-    console.log('⏳ Is loading:', isLoading);
-    
-    if (user) {
-      console.log('✅ Cargando dashboard para usuario:', user.email);
-      console.log('👥 Rol del usuario:', user.role);
-      console.log('🔒 Es admin?', isAdmin());
-      
-      // Solo cargar datos completos si no es chofer
-      if (user.role !== 'chofer') {
-        loadDashboard(user.role).catch(error => {
-          console.error('❌ Error cargando dashboard:', error);
-        });
-      } else {
-        console.log('👤 Usuario chofer - cargando solo viajes...');
-        // Para choferes solo cargar viajes, no stats
-        loadDashboard('chofer').catch(error => {
-          console.error('❌ Error cargando viajes del chofer:', error);
-          // Si falla, continuar sin datos
-        });
-      }
+    if (!user) return;
+    // Si el usuario es chofer y está deshabilitado, forzar logout y mostrar mensaje
+    if (user.role === 'chofer' && user.isActive === false) {
+      import('react-hot-toast').then(({ default: toast }) => {
+        toast.error('Tu cuenta ha sido deshabilitada. Contacta al administrador.');
+      });
+      useAuthStore.getState().logout();
+      return;
+    }
+    if (user.role === 'admin' || user.role === 'super_admin') {
+      loadDashboard(user.role).catch(() => {});
+      getDailyTrips().catch(() => {});
+    } else if (user.role === 'chofer') {
+      loadDashboard('chofer').catch(() => {});
+      getWeeklyTrips().catch(() => {});
     } else {
-      console.warn('⚠️ No hay usuario autenticado');
+      loadDashboard(user.role).catch(() => {});
     }
-  }, [loadDashboard, user]);
+  }, [loadDashboard, getWeeklyTrips, getDailyTrips, user]);
 
-  // Comentado temporalmente para debug
-  // const refreshDashboard = async () => {
-  //   await loadDashboard();
-  // };
-  // const autoRefresh = useAutoRefresh(refreshDashboard, !!user);
+  useEffect(() => {
+    if (!user) return;
+    // Polling para verificar estado del usuario cada 10 segundos
+    if (user.role === 'chofer') {
+      const checkUserStatus = async () => {
+        try {
+          const updatedUser = await useAuthStore.getState().getProfile();
+          if (updatedUser.isActive === false) {
+            import('react-hot-toast').then(({ default: toast }) => {
+              toast.error('Tu cuenta ha sido deshabilitada. Contacta al administrador.');
+            });
+            useAuthStore.getState().logout();
+          }
+        } catch (e) {
+          // Si hay error, forzar logout
+          useAuthStore.getState().logout();
+        }
+      };
+      pollingRef.current = setInterval(checkUserStatus, 10000);
+      return () => clearInterval(pollingRef.current);
+    }
+  }, [user]);
 
-  // Render simple para debug
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <LoadingSpinner />
-          <p className="mt-2 text-gray-600">Cargando dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // Polling para refrescar dashboard admin cada 15 segundos
+  useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'super_admin')) {
+      // Polling para refrescar dashboard cada 1 minuto
+      const interval = setInterval(() => {
+        // Refrescar datos críticos para el dashboard y viajes activos
+        loadDashboard(user.role);
+        getDailyTrips();
+        // Forzar actualización de stats y viajes activos
+        useDashboardStore.getState().getDashboardStats();
+        useDashboardStore.getState().getActiveTrips();
+      }, 60000); // 1 minuto
+      return () => clearInterval(interval);
+    }
+  }, [user, loadDashboard, getDailyTrips]);
 
-  // Test render básico
-  if (!user) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <p className="text-red-600">Error: No hay usuario autenticado</p>
-        </div>
-      </div>
-    );
-  }
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('es-UY', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  const StatCard = ({ title, value, icon: Icon, color = 'primary' }) => (
-    <Card className="flex items-center p-6">
-      <div className={`p-3 rounded-full bg-${color}-100 mr-4`}>
-        <Icon className={`h-6 w-6 text-${color}-600`} />
-      </div>
-      <div>
-        <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">
-          {title}
-        </p>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-      </div>
-    </Card>
-  );
-
-  // Vista específica para choferes
-  if (user?.role === 'chofer') {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    console.log('📱 Dashboard chofer - Dispositivo móvil:', isMobile);
-    console.log('📱 Dashboard chofer - Datos disponibles:', {
-      user: !!user,
-      upcomingTrips: upcomingTrips?.length || 0,
-      isLoading,
-      userAgent: navigator.userAgent.substring(0, 100)
-    });
-
-    let renderError = null;
-    let renderedTrips = null;
+  // Utilidad para formato 24h
+  function formatDate(date) {
+    if (!date) return '';
     try {
-      renderedTrips = upcomingTrips && upcomingTrips.length > 0 ? (
-        <div className="space-y-4">
-          {upcomingTrips.slice(0, 5).map((trip, idx) => {
-            try {
-              console.log('📱 Renderizando trip', idx, trip);
-              return (
-                <div key={trip._id || trip.id || idx} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">
-                      {trip.origin} → {trip.destination}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {formatDate(trip.departureDate)} - {trip.departureTime}
-                    </p>
-                    {trip.description && (
-                      <p className="text-sm text-gray-600 mt-1">{trip.description}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      trip.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      trip.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {trip.status === 'pending' ? 'Pendiente' :
-                        trip.status === 'approved' ? 'Aprobado' :
-                        trip.status || 'Sin estado'}
-                    </span>
-                  </div>
-                </div>
-              );
-            } catch (tripError) {
-              console.error('❌ Error renderizando trip', idx, tripError, trip);
-              renderError = 'Error en viaje #' + (idx + 1) + ': ' + (tripError?.message || String(tripError));
-              return (
-                <div key={idx} style={{ color: 'red', fontWeight: 'bold' }}>
-                  Error en viaje #{idx + 1}: {tripError?.message || String(tripError)}
-                </div>
-              );
-            }
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-8">
-          <MapPinIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">
-            {isLoading ? 'Cargando tus viajes...' : 'No tienes viajes próximos asignados'}
-          </p>
-        </div>
-      );
-    } catch (error) {
-      console.error('📱 Error renderizando lista de viajes:', error);
-      renderError = error?.message || String(error);
+      return format(new Date(date), 'dd/MM/yyyy HH:mm');
+    } catch {
+      return String(date);
     }
-
-    if (renderError) {
-      return (
-        <div style={{ background: '#fff0f0', color: '#b00020', fontSize: 22, padding: 32, textAlign: 'center', border: '3px solid #b00020', borderRadius: 12, margin: 24 }}>
-          <strong>🚨 Error en la lista de viajes</strong>
-          <br /><br />
-          <span style={{ fontSize: 18 }}>{renderError}</span>
-          <br /><br />
-          <span style={{ fontSize: 16, color: '#333' }}>Copia este mensaje y envíalo al soporte.<br />Si puedes, haz una captura de pantalla.</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        {/* Header para choferes */}
-        <div>
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                ¡Bienvenido, {user?.name}!
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Aquí puedes ver tus viajes asignados y próximas tareas
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Mis Viajes */}
-        <Card title="Mis Próximos Viajes">
-          {renderedTrips}
-        </Card>
-
-        {/* Accesos rápidos para chofer */}
-        <Card title="Acciones Disponibles">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Link
-              to="/trips"
-              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <MapPinIcon className="h-8 w-8 text-blue-600 mb-2" />
-              <h3 className="font-medium text-gray-900">Ver Mis Viajes</h3>
-              <p className="text-sm text-gray-500">Consultar todos mis viajes</p>
-            </Link>
-            
-            <div className="block p-4 border border-gray-200 rounded-lg bg-gray-50">
-              <ClockIcon className="h-8 w-8 text-gray-400 mb-2" />
-              <h3 className="font-medium text-gray-500">Historial</h3>
-              <p className="text-sm text-gray-400">Próximamente</p>
-            </div>
-          </div>
-        </Card>
-
-      </div>
-    );
   }
 
   if (isLoading && !stats) {
@@ -232,84 +97,40 @@ const Dashboard = () => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <AnimatedCars />
-      {/* Header */}
-      <div>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Bienvenido, {user?.name}
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              {user?.role === 'chofer' 
-                ? 'Aquí puedes ver tus viajes asignados'
-                : 'Panel de control - Gestión de Viajes MGAP'
-              }
-            </p>
-          </div>
-          {/* Control de auto-refresh - Comentado temporalmente para debug */}
-          {/* <AutoRefreshControl
-            isActive={autoRefresh.isActive}
-            countdown={autoRefresh.countdown}
-            lastRefresh={autoRefresh.lastRefresh}
-            onToggle={autoRefresh.toggle}
-            onRefreshNow={autoRefresh.refreshNow}
-            className="mt-1"
-          /> */}
+  if (user?.role === 'chofer' && user.isActive === false) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-white p-8 rounded shadow-md text-center max-w-md">
+          <h2 className="text-2xl font-bold text-red-700 mb-4">Usuario deshabilitado</h2>
+          <p className="mb-6 text-gray-700">Tu cuenta ha sido deshabilitada por un administrador.<br />No puedes acceder al sistema hasta ser reactivado.</p>
+          <button
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+            onClick={() => useAuthStore.getState().logout()}
+          >
+            Cerrar sesión
+          </button>
         </div>
       </div>
+    );
+  }
 
-      {/* Stats Cards - Solo para administradores */}
-      {stats && user?.role !== 'chofer' && (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Total Viajes"
-            value={stats.overview?.totalTrips || 0}
-            icon={MapPinIcon}
-            color="blue"
-          />
-          <StatCard
-            title="Viajes Activos"
-            value={stats.overview?.activeTrips || 0}
-            icon={ClockIcon}
-            color="green"
-          />
-          <StatCard
-            title="Vehículos en Uso"
-            value={stats.overview?.vehiclesInUse || 0}
-            icon={CarIcon}
-            color="yellow"
-          />
-          {isAdmin() && (
-            <StatCard
-              title="Total Choferes"
-              value={stats.overview?.totalDrivers || 0}
-              icon={UsersIcon}
-              color="purple"
-            />
-          )}
+  if (user?.role === 'chofer') {
+    return (
+      <>
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">¡Bienvenido, {user?.name}!</h1>
+            <p className="mt-1 text-sm text-gray-500">Aquí puedes ver tus viajes asignados y próximas tareas</p>
+          </div>
         </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Próximos Viajes */}
-        <Card title={user?.role === 'chofer' ? 'Mis Próximos Viajes' : 'Próximos Viajes'}>
-          {isLoading ? (
-            <LoadingSpinner />
-          ) : Array.isArray(upcomingTrips) && upcomingTrips.length > 0 ? (
+        <Card title="Mis Próximos Viajes">
+          {isLoading ? <LoadingSpinner /> : Array.isArray(upcomingTrips) && upcomingTrips.length > 0 ? (
             <div className="space-y-3">
               {upcomingTrips.map((trip) => (
-                <div
-                  key={trip._id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
+                <div key={trip._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-900">{trip.destination}</p>
-                    <p className="text-sm text-gray-500">
-                      {trip.driver?.name} - {formatDate(trip.departureDate)}
-                    </p>
+                    <p className="text-sm text-gray-500">{trip.driver?.name} - {formatDate(trip.departureDate)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-500">{trip.vehicle?.licensePlate}</p>
@@ -317,95 +138,139 @@ const Dashboard = () => {
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">
-              No hay viajes próximos programados
-            </p>
-          )}
+          ) : <p className="text-gray-500 text-center py-8">No hay viajes próximos programados</p>}
         </Card>
-
-        {/* Viajes Activos */}
         <Card title="Viajes en Curso">
-          {isLoading ? (
-            <LoadingSpinner />
-          ) : Array.isArray(activeTrips) && activeTrips.length > 0 ? (
+          <div className="relative">
+            <AnimatedCars />
+            {isLoading ? <LoadingSpinner /> : Array.isArray(activeTrips) && activeTrips.length > 0 ? (
+              <div className="space-y-3">
+                {activeTrips.map((trip) => (
+                  <div key={trip._id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">{trip.destination}</p>
+                      <p className="text-sm text-gray-500">{trip.driver?.name} - {formatDate(trip.departureDate)}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">En curso</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-gray-500 text-center py-8">No hay viajes en curso</p>}
+          </div>
+        </Card>
+        <Card title="Historial Semanal de Viajes Completados">
+          {isLoading ? <LoadingSpinner /> : Array.isArray(weeklyTrips) && weeklyTrips.length > 0 ? (
             <div className="space-y-3">
-              {activeTrips.map((trip) => (
-                <div
-                  key={trip._id}
-                  className="flex items-center justify-between p-3 bg-green-50 rounded-lg"
-                >
+              {weeklyTrips.map((trip) => (
+                <div key={trip._id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-900">{trip.destination}</p>
-                    <p className="text-sm text-gray-500">
-                      {trip.driver?.name} - {formatDate(trip.departureDate)}
-                    </p>
+                    <p className="text-sm text-gray-500">{trip.driver?.name} - {formatDate(trip.departureDate)}</p>
                   </div>
                   <div className="text-right">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      En curso
-                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Completado</span>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">
-              No hay viajes en curso
-            </p>
-          )}
+          ) : <p className="text-gray-500 text-center py-8">No hay viajes completados esta semana</p>}
         </Card>
-      </div>
+      </>
+    );
+  }
 
-      {/* Accesos rápidos */}
-      <Card title="Accesos Rápidos">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link
-            to="/trips"
-            className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <MapPinIcon className="h-8 w-8 text-blue-600 mb-2" />
-            <h3 className="font-medium text-gray-900">Gestionar Viajes</h3>
-            <p className="text-sm text-gray-500">Ver y crear nuevos viajes</p>
-          </Link>
-
-          {canManageTripsAndVehicles() && (
-            <Link
-              to="/vehicles"
-              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <CarIcon className="h-8 w-8 text-green-600 mb-2" />
-              <h3 className="font-medium text-gray-900">Vehículos</h3>
-              <p className="text-sm text-gray-500">Administrar flota de vehículos</p>
-            </Link>
-          )}
-
-          {/* Admin principal ve gestión completa de usuarios */}
-          {canManageUsers() && (
-            <Link
-              to="/users"
-              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <UsersIcon className="h-8 w-8 text-purple-600 mb-2" />
-              <h3 className="font-medium text-gray-900">Usuarios</h3>
-              <p className="text-sm text-gray-500">Gestionar choferes y admins</p>
-            </Link>
-          )}
-          
-          {/* Administrativos pueden ver lista de choferes para asignaciones */}
-          {!canManageUsers() && canManageTripsAndVehicles() && (
-            <Link
-              to="/drivers"
-              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <UsersIcon className="h-8 w-8 text-purple-600 mb-2" />
-              <h3 className="font-medium text-gray-900">Choferes</h3>
-              <p className="text-sm text-gray-500">Ver choferes disponibles</p>
-            </Link>
-          )}
+  // admin/super_admin
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Bienvenido, {user?.name}</h1>
+          <p className="mt-1 text-sm text-gray-500">Panel de control - Gestión de Viajes MGAP</p>
         </div>
-      </Card>
-
+      </div>
+      {stats && user?.role !== 'chofer' && (
+        <>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard title="Total Viajes" value={stats.overview?.totalTrips || 0} icon={MapPinIcon} color="blue" />
+            <StatCard title="Viajes Activos" value={stats.overview?.activeTrips || 0} icon={ClockIcon} color="green" showAnimatedCars={true} />
+            {user.role === 'super_admin' && (
+              <StatCard title="Vehículos en Uso" value={stats.overview?.vehiclesInUse || 0} icon={CarIcon} color="yellow" />
+            )}
+            {user.role === 'super_admin' && (
+              <StatCard title="Total Choferes" value={stats.overview?.totalDrivers || 0} icon={UsersIcon} color="purple" />
+            )}
+          </div>
+          {(user.role === 'admin' || user.role === 'super_admin') && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              <Card title="Viajes en Curso (Hoy)">
+                {isLoading ? <LoadingSpinner /> : Array.isArray(dailyTrips.activeTrips) && dailyTrips.activeTrips.length > 0 ? (
+                  <div className="space-y-3">
+                    {dailyTrips.activeTrips.map((trip) => (
+                      <div key={trip._id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-900">{trip.destination}</p>
+                          <p className="text-sm text-gray-500">{trip.driver?.name} - {formatDate(trip.departureDate)}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">En curso</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-gray-500 text-center py-8">No hay viajes en curso hoy</p>}
+              </Card>
+              <Card title="Viajes Completados (Hoy 07:00-22:00)">
+                {isLoading ? <LoadingSpinner /> : Array.isArray(dailyTrips.completedTrips) && dailyTrips.completedTrips.length > 0 ? (
+                  <div className="space-y-3">
+                    {dailyTrips.completedTrips.map((trip) => (
+                      <div key={trip._id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-900">{trip.destination}</p>
+                          <p className="text-sm text-gray-500">{trip.driver?.name} - {formatDate(trip.departureDate)}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Completado</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-gray-500 text-center py-8">No hay viajes completados hoy</p>}
+              </Card>
+            </div>
+          )}
+        </>
+      )}
+      {user?.role !== 'chofer' && (
+        <Card title="Próximos Viajes">
+          {isLoading ? <LoadingSpinner /> : Array.isArray(upcomingTrips) && upcomingTrips.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingTrips.map((trip) => (
+                <div key={trip._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900">{trip.destination}</p>
+                    <p className="text-sm text-gray-500">{trip.driver?.name} - {formatDate(trip.departureDate)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">{trip.vehicle?.licensePlate}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-gray-500 text-center py-8">No hay viajes próximos programados</p>}
+        </Card>
+      )}
+      {/* Arreglo: envolver Link en un div para que el return tenga un solo elemento padre */}
+      {!canManageUsers() && canManageTripsAndVehicles() && (
+        <div>
+          <Link to="/drivers" className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <UsersIcon className="h-8 w-8 text-purple-600 mb-2" />
+            <h3 className="font-medium text-gray-900">Choferes</h3>
+            <p className="text-sm text-gray-500">Ver choferes disponibles</p>
+          </Link>
+        </div>
+      )}
     </div>
   );
 };

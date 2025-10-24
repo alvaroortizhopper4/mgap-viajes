@@ -1,0 +1,3 @@
+// Sonido de bocina corta (libre de derechos, dominio público)
+// Fuente sugerida: https://freesound.org/people/InspectorJ/sounds/411642/ (Horn, Car, Single, A.wav)
+// Descarga y coloca el archivo en: public/horn.mp3

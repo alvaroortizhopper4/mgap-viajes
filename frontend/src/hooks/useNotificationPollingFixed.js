@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useToast } from '../contexts/ToastContext';
 import api from '../utils/axios';
 import useAuthStore from '../store/authStore';
 
@@ -11,7 +12,7 @@ const useNotificationPollingFixed = () => {
   const [lastCheck, setLastCheck] = useState(null);
   const intervalRef = useRef(null);
   const { user, isDriver } = useAuthStore();
-  // Eliminado showToast, solo se usan notificaciones nativas
+  const { showToast } = useToast();
 
   // Determinar frecuencia según rol del usuario
   const getPollingInterval = () => {
@@ -62,11 +63,12 @@ const useNotificationPollingFixed = () => {
           notification => !previousNotificationIds.includes(notification._id) && !notification.read
         );
         
-        // Mostrar notificaciones nativas para las nuevas
+        // Mostrar notificaciones nativas y toasts para las nuevas
         if (trulyNewNotifications.length > 0) {
           console.log('🆕 Nuevas notificaciones detectadas:', trulyNewNotifications.length);
           trulyNewNotifications.forEach(notification => {
             showBrowserNotification(notification);
+            showToast(notification, { duration: 6000 });
           });
         }
         setRecentNotifications(newNotifications);
@@ -92,7 +94,7 @@ const useNotificationPollingFixed = () => {
   // Marcar todas como leídas
   const markAllAsRead = async () => {
     try {
-      await api.patch('/notifications/markAllAsRead');
+      await api.put('/notifications/mark-all-read');
       setRecentNotifications((prev) => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {

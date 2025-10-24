@@ -16,14 +16,14 @@ const NotificationBell = () => {
   } = useNotificationPollingFixed();
 
   const formatTime = (date) => {
-    const now = new Date();
-    const notifDate = new Date(date);
-    const diffInMinutes = Math.floor((now - notifDate) / (1000 * 60));
+  const now = new Date();
+  const notifDate = new Date(date);
+  const diffInMinutes = Math.floor((now - notifDate) / (1000 * 60));
     
-    if (diffInMinutes < 1) return 'Ahora';
-    if (diffInMinutes < 60) return `Hace ${diffInMinutes}min`;
-    if (diffInMinutes < 1440) return `Hace ${Math.floor(diffInMinutes / 60)}h`;
-    return notifDate.toLocaleDateString();
+  if (diffInMinutes < 1) return 'Ahora';
+  if (diffInMinutes < 60) return `Hace ${diffInMinutes}min`;
+  if (diffInMinutes < 1440) return `Hace ${Math.floor(diffInMinutes / 60)}h`;
+  return notifDate.toLocaleTimeString('es-UY', {hour: '2-digit', minute: '2-digit', hour12: false}) + ' ' + notifDate.toLocaleDateString('es-UY');
   };
 
   const getNotificationIcon = (type) => {

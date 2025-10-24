@@ -5,6 +5,7 @@ import useAuthStore from './store/authStore';
 import useNotifications from './hooks/useNotifications';
 import useNotificationPermissions from './hooks/useNotificationPermissions';
 import ProtectedRoute from './components/ProtectedRoute';
+const AdminAdvancedDashboard = React.lazy(() => import('./pages/AdminAdvancedDashboard'));
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -88,22 +89,51 @@ function App() {
     };
   }, [isMobile]);
 
-  if (hasError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Error de Aplicación</h1>
-          <p className="text-gray-600 mb-4">{errorMsg ? errorMsg : 'Ha ocurrido un error inesperado.'}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Recargar Página
-          </button>
-        </div>
-      </div>
-    );
-  }
+  React.useEffect(() => {
+    // Inicializar autenticación desde localStorage
+    initialize();
+  }, []); // Solo ejecutar una vez al montar
+
+  React.useEffect(() => {
+    // console.log('🔍 Debug - Estado de autenticación:', {
+    //   isAuthenticated: isAuthenticated(),
+    //   user: user,
+    //   token: !!localStorage.getItem('token')
+    // });
+    
+    if (isAuthenticated() && user) {
+      // console.log('👤 Usuario autenticado, sistema de notificaciones activo');
+      
+      // Aquí podrías agregar lógica adicional como:
+      // - Polling periódico para notificaciones
+      // - WebSocket para notificaciones en tiempo real
+      // - etc.
+    }
+  }, [isAuthenticated, user]);
+
+  React.useEffect(() => {
+    if (isAuthenticated() && user) {
+      // console.log('🔔 Usuario logueado, solicitando permisos de notificación...');
+      requestPermissionOnLogin();
+      
+      // Si ya tiene permisos, enviar una notificación de bienvenida
+      setTimeout(() => {
+        if (isGranted) {
+          sendTestNotification(
+            `¡Bienvenido ${user.name}!`, 
+            'Las notificaciones están activas. Recibirás alertas importantes aquí.'
+          );
+        }
+      }, 3000); // 3 segundos después del login
+    }
+  }, [isAuthenticated, user, requestPermissionOnLogin, sendTestNotification, isGranted]);
+
+  React.useEffect(() => {
+    if (!isAuthenticated()) {
+      resetPermissionState();
+    }
+  }, [isAuthenticated, resetPermissionState]);
+
 
   useEffect(() => {
     // Inicializar autenticación desde localStorage
@@ -157,24 +187,7 @@ function App() {
     <ToastProvider>
       <Router>
         <div className="App">
-          {isMobile && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '100vw',
-              zIndex: 9999,
-              background: '#ffecb3',
-              color: '#b00020',
-              fontWeight: 'bold',
-              fontSize: 18,
-              padding: 12,
-              textAlign: 'center',
-              borderBottom: '2px solid #b00020',
-            }}>
-              📱 Debug móvil activo - React está montado
-            </div>
-          )}
+          {/* Cartel debug móvil eliminado */}
         <Toaster
           position="top-right"
           toastOptions={{

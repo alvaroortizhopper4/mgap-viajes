@@ -21,17 +21,27 @@ const Login = () => {
   } = useForm();
 
   useEffect(() => {
-    if (isAuthenticated()) {
+    const authUser = useAuthStore.getState().user;
+    // Solo navegar si el usuario está autenticado y activo
+    if (isAuthenticated() && authUser && authUser.isActive !== false) {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, from]);
 
   const [notifError, setNotifError] = useState(null);
+  const [disabledError, setDisabledError] = useState(null);
 
   const onSubmit = async (data) => {
     setNotifError(null);
+    setDisabledError(null);
     const success = await login(data.email, data.password);
     if (success) {
+      const { user } = useAuthStore.getState();
+      if (user && user.isActive === false) {
+        setDisabledError('Tu usuario está deshabilitado. Contacta al administrador.');
+        useAuthStore.getState().logout();
+        return;
+      }
       // Solicitar permisos de notificación solo para choferes
       setTimeout(() => {
         const { isDriver, user } = useAuthStore.getState();
@@ -87,6 +97,24 @@ const Login = () => {
             {notifError}
             <br />
             Si esto persiste, reporta este mensaje a soporte.
+          </div>
+        )}
+        {disabledError && (
+          <div style={{
+            background: '#fff0f0',
+            color: '#b00020',
+            fontSize: 22,
+            padding: 32,
+            textAlign: 'center',
+            border: '3px solid #b00020',
+            borderRadius: 16,
+            margin: '40px auto',
+            maxWidth: 480,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            fontWeight: 600
+          }}>
+            <strong style={{ fontSize: 32, display: 'block', marginBottom: 16 }}>🚫 Usuario deshabilitado</strong>
+            <span style={{ fontSize: 20 }}>{disabledError}</span>
           </div>
         )}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
